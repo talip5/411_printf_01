@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,6 +43,17 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+	uint32_t grade = 5;
+	uint32_t data_rx=0;
+	uint32_t rx_data = 0;
+	uint32_t array5[5];
+	uint8_t control=0;
+	uint8_t lenght=0;
+	uint32_t show1=0;
+	char name='R';
+	uint32_t gelen_data = 0;
+	uint32_t data_14 = 0;
+	uint32_t data_TXE=1;
 
 //#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 
@@ -67,6 +78,8 @@ int _write(int file, char *ptr, int len)
  //USART2->DR=(uint8_t*)ptr[DataIdx];
  USART2->DR=(uint8_t)ptr[DataIdx];
   }
+  SET_BIT(USART2->CR1, USART_CR1_TXEIE);
+     HAL_Delay(100);
   return len;
 }
 
@@ -80,7 +93,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-	int number=5;
+	int number=4;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -102,7 +115,22 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+
   /* USER CODE BEGIN 2 */
+
+  	  //printf("Hello%d\n\r",number++);
+  	  //HAL_Delay(1000);
+
+  	/* 4- Enable UART Receive Data Register Not Empty */
+  	   //SET_BIT(USART2->CR1, USART_CR1_RXNEIE);
+  	   USART2->CR1 |= USART_CR1_RXNEIE;
+
+  	   //SET_BIT(USART2->CR1, USART_CR1_TXEIE);
+
+  	   /* 5 - Enable UART Interrupt in NVIC */
+
+  	    HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
+  	    HAL_NVIC_EnableIRQ(USART2_IRQn);
 
   /* USER CODE END 2 */
 
@@ -114,10 +142,13 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  //HAL_GPIO_WritePin(LED15_GPIO_Port, LED15_Pin, GPIO_PIN_SET);
-	  //USART2->DR = 'A';
-	  printf("Hello%d\n\r",number++);
+	  //USART2->DR = '3';
+	  //printf("Hello%d\n\r",number++);
 	  //printf("H");
-	  HAL_Delay(1000);
+	  //HAL_Delay(1000);
+	  printf("Hello%d\n\r",number++);
+	   	  HAL_Delay(1000);
+
   }
   /* USER CODE END 3 */
 }
@@ -217,14 +248,14 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LED15_GPIO_Port, LED15_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, LED14_Pin|LED15_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : LED15_Pin */
-  GPIO_InitStruct.Pin = LED15_Pin;
+  /*Configure GPIO pins : LED14_Pin LED15_Pin */
+  GPIO_InitStruct.Pin = LED14_Pin|LED15_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LED15_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -245,6 +276,105 @@ static void MX_GPIO_Init(void)
    e.g. write a character to the USART1 and Loop until the end of transmission
 	HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 0xFFFF);
    return ch;
+}*/
+
+void USART2_IRQHandler(void) {
+	uint32_t isrflags = USART2->SR;
+	uint32_t control_reg1 = USART2->CR1;
+	 //data_TXE = USART2->SR & USART_SR_TXE;
+	 //data_TXE = USART2->CR1 & USART_CR1_TCIE;
+
+	//HAL_GPIO_WritePin(LED15_GPIO_Port,LED15_Pin,GPIO_PIN_SET);
+	 /*while(data_TXE !=0){
+		 HAL_GPIO_WritePin(LED15_GPIO_Port,LED15_Pin,GPIO_PIN_SET);
+	 }*/
+	//data_TXE = USART2->SR & USART_SR_TC;
+	 /*if(data_TXE ==1){
+		 HAL_GPIO_WritePin(LED15_GPIO_Port,LED15_Pin,GPIO_PIN_SET);
+	 }*/
+	/* UART in mode Receiver */
+	if (((isrflags & USART_SR_RXNE) != RESET) && ((control_reg1 & USART_CR1_RXNEIE) != RESET)) {
+		//HAL_GPIO_TogglePin(LED14_GPIO_Port,LED14_Pin);
+		rx_data = (uint8_t) USART2->DR;
+		if(control>=0 && (control<5)){
+		array5[control]=rx_data;
+		control++;
+		} else {
+			control = 0;
+			array5[control] = rx_data;
+		}
+
+		if (rx_data == 'A') {
+			lenght = sizeof(array5) / sizeof(array5[0]);
+			HAL_GPIO_WritePin(LED15_GPIO_Port,LED15_Pin,GPIO_PIN_SET);
+			//time1();
+			//HAL_GPIO_WritePin(LED15_GPIO_Port,LED15_Pin,GPIO_PIN_RESET);
+			while ((USART2->SR & USART_SR_TXE) == 0)
+				;
+			USART2->DR = 'K';
+			while ((USART2->SR & USART_SR_TXE) == 0)
+				;
+			USART2->DR = 'T';
+			while ((USART2->SR & USART_SR_TXE) == 0)
+				;
+			USART2->DR = 'E';
+			while ((USART2->SR & USART_SR_TXE) == 0)
+				;
+			USART2->DR = 'P';
+		}
+
+		else if (rx_data == 'B') {
+			HAL_GPIO_WritePin(LED15_GPIO_Port, LED15_Pin, GPIO_PIN_RESET);
+		}
+		return;
+	}
+
+	/* UART in mode Transmitter */
+	if (((isrflags & USART_SR_TXE) != RESET) && ((control_reg1 & USART_CR1_TXEIE) != RESET)) {
+		//USART2->CR1 &=~(USART_CR1_TXEIE);
+		HAL_GPIO_TogglePin(LED14_GPIO_Port,LED14_Pin);
+		HAL_Delay(1000);
+		//HAL_GPIO_WritePin(LED14_GPIO_Port,LED14_Pin,GPIO_PIN_SET);
+		gelen_data = USART2->DR;
+		if(gelen_data == 51){
+		HAL_GPIO_WritePin(LED15_GPIO_Port,LED15_Pin,GPIO_PIN_SET);
+		//USART2->CR1 |= USART_CR1_RXNEIE;
+		//USART2->CR1 &=~(USART_CR1_TXEIE);
+		}
+		CLEAR_BIT(USART2->CR1, USART_CR1_TXEIE);
+		return;
+	}
+}
+
+
+void time1(void){
+	for (int var = 0; var < 10000000; ++var) {
+
+	}
+}
+
+
+
+
+void UART_send_byte(uint8_t data)
+{
+	if(data==49){
+		HAL_GPIO_WritePin(LED15_GPIO_Port,LED15_Pin,GPIO_PIN_SET);
+	}
+	//USART2->DR= data;
+ //SET_BIT(USART2->CR1, USART_CR1_TXEIE);
+}
+
+
+/*void UART_send_byte(uint8_t data)
+{
+	UART_BufferTX.buffer[UART_BufferTX.head_pointer++] = data;
+	if(UART_BufferTX.head_pointer == BUFFER_SIZE)
+	{
+		UART_BufferTX.head_pointer = 0;
+	}
+   Enable the UART Transmit Data Register Empty Interrupt
+ SET_BIT(USART2->CR1, USART_CR1_TXEIE);
 }*/
 
 /* USER CODE END 4 */
